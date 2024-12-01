@@ -1,6 +1,6 @@
-nkhandic/dicdir/*.dic
-nkhandic/dicdir/*.bin
-nkhandic/dicdir/dicrc
+handic/dicdir/*.dic
+handic/dicdir/*.bin
+handic/dicdir/dicrc
 
 # for python
 # Byte-compiled / optimized / DLL files
