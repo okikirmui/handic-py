@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "handic"
-version = "0.1.0"
+version = "24.12.01"
 requires-python = ">= 3.8"
 authors = [
     {name="Yoshinori Sugai"},
