@@ -4,6 +4,8 @@ This is a package to install [HanDic](https://github.com/okikirmui/handic), a di
 
 To use this package for morphological analysis, the MeCab wrapper such as [mecab-python3](https://github.com/SamuraiT/mecab-python3) is required.
 
+**[notice]** After v.0.1.0, calendar versioning is used according to the dictionary version.
+
 ## Installation
 
 from PyPI:
