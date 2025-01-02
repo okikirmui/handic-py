@@ -1,5 +1,7 @@
 # handic-py
 
+![PyPI - Version](https://img.shields.io/pypi/v/handic)
+
 This is a package to install [HanDic](https://github.com/okikirmui/handic), a dictionary for morphological analysis of Korean languages, via pip and use it in Python.
 
 To use this package for morphological analysis, the MeCab wrapper such as [mecab-python3](https://github.com/SamuraiT/mecab-python3) is required.
