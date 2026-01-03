@@ -2,6 +2,9 @@ handic/dicdir/*.dic
 handic/dicdir/*.bin
 handic/dicdir/dicrc
 
+# for MacOS
+.DS_Store
+
 # for python
 # Byte-compiled / optimized / DLL files
 __pycache__/
