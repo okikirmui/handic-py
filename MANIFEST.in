@@ -1,1 +1,2 @@
-include handic/dicdir/*
+recursive-include handic/dicdir *
+include handic/dicdir/version

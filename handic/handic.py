@@ -1,13 +1,10 @@
-import os
-import sys
+# handic/handic.py
+from __future__ import annotations
 
-def get_version(dicdir):
-    vpath = os.path.join(dicdir, 'version')
-    with open(vpath) as vfile:
-        return vfile.read().strip()
+from .paths import PATHS
 
-_curdir = os.path.dirname(__file__)
+# 互換用: 旧APIを維持（中身はpathsに委譲）
+DICDIR = str(PATHS.dicdir())
 
-# This will be used elsewhere to initialize the tagger
-DICDIR = os.path.join(_curdir, 'dicdir')
-VERSION = get_version(DICDIR)
+# VERSIONもpathsに寄せたいなら、paths側に version() を生やしてもOK
+VERSION = PATHS.version()

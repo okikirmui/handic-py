@@ -1,128 +1,211 @@
-# handic-py
+# handic-py — Python wrapper for the HanDic MeCab dictionary
 
 ![PyPI - Version](https://img.shields.io/pypi/v/handic)
 
-This is a package to install [HanDic](https://github.com/okikirmui/handic), a dictionary for morphological analysis of Korean languages, via pip and use it in Python.
+👉 **HanDic (dictionary) repository**: https://github.com/okikirmui/handic
 
-To use this package for morphological analysis, the MeCab wrapper such as [mecab-python3](https://github.com/SamuraiT/mecab-python3) is required.
+`handic` is a **Python helper package** that makes it easy to use **HanDic**, a MeCab dictionary for contemporary Korean, **from Python code**.
 
-**[notice]** After v.0.1.0, calendar versioning is used according to the dictionary version.
+> ⚠️ Important distinction  
+> - **HanDic** = the MeCab dictionary itself (linguistic resource)  
+> - **handic (this package)** = a Python interface / utility layer for HanDic  
+>  
+> The dictionary is developed and published separately;  
+> this package focuses on *Python usability*.
 
-## Installation
+---
 
-from PyPI:
+## What this package does (and does not)
 
-```Shell
-pip install handic
+### ✔ What `handic` provides
+- Automatic access to the **HanDic MeCab dictionary**
+- A **high-level Python API** for Korean morphological analysis
+- Transparent handling of **Jamo-based input/output**
+- Safe fallback behavior for **unknown words**
+- Optional **Hanja (漢字) representation** using HanDic features
+
+### ✘ What `handic` is *not*
+- It is **not** the primary distribution point of HanDic itself
+- It does **not** define the linguistic content of the dictionary
+
+---
+
+## Relationship between HanDic and this package
+
+```
+HanDic (dictionary repository)
+        ↓
+   MeCab dictionary files
+        ↓
+  handic (Python wrapper)
+        ↓
+  Your Python code
 ```
 
-## Usage
+- The **linguistic design and dictionary entries** live in the HanDic repository
+- This package bundles a released snapshot of the dictionary **only to enable Python use**
+- Updates to dictionary content are driven by the HanDic project
 
-Since HanDic requires Hangul Jamo(Unicode Hangul Jamo) as input, please convert Hangul (Unicode Hangul Syllables) using modules such as [jamotools](https://pypi.org/project/jamotools/), or `tools/k2jamo.py` script included in HanDic.
+---
 
-### basic
+## 🚀 Quick Start (Python)
 
-example:
+### Installation
 
-```Python
-import MeCab
+```bash
+pip install handic mecab-python3 jamotools
+```
+
+### Minimal example
+
+```python
 import handic
-import jamotools
 
-mecaboption = f'-r /dev/null -d {handic.DICDIR}'
+text = "공기 진짜 좋다."
 
-tokenizer = MeCab.Tagger(mecaboption)
-tokenizer.parse('')
-
-# 《표준국어대사전》 "형태소" 뜻풀이
-sentence = u'뜻을 가진 가장 작은 말의 단위. ‘이야기책’의 ‘이야기’, ‘책’ 따위이다.'
-
-jamo = jamotools.split_syllables(sentence, jamo_type="JAMO")
-
-node = tokenizer.parseToNode(jamo)
-while node:
-    print(node.surface, node.feature)
-    node = node.next
+print(handic.tokenize_hangul(text))
+print(handic.pos_tag(text))
+print(handic.convert_text_to_hanja_hangul(text))
 ```
 
-result:
-
-```Shell
-BOS/EOS,*,*,*,*,*,*,*,*,*,*
-뜻    Noun,普通,*,*,*,뜻,뜻,*,*,B,NNG
-을    Ending,助詞,対格,*,*,을02,을,*,*,*,JKO
-가지  Verb,自立,*,語基2,*,가지다,가지,*,*,A,VV
-ᆫ       Ending,語尾,連体形,*,2接続,ㄴ05,ㄴ,*,*,*,ETM
-가장 Adverb,一般,*,*,*,가장01,가장,*,*,A,MAG
-작으 Adjective,自立,*,語基2,*,작다01,작으,*,*,A,VA
-ᆫ       Ending,語尾,連体形,*,2接続,ㄴ05,ㄴ,*,*,*,ETM
-말    Noun,普通,動作,*,*,말01,말,*,*,A,NNG
-의     Ending,助詞,属格,*,*,의10,의,*,*,*,JKG
-단위 Noun,普通,*,*,*,단위02,단위,單位,*,C,NNG
-.       Symbol,ピリオド,*,*,*,.,.,*,*,*,SF
-‘      Symbol,カッコ,引用符-始,*,*,‘,‘,*,*,*,SS
-이야기책   Noun,普通,*,*,*,이야기책,이야기책,이야기冊,*,*,NNG
-’      Symbol,カッコ,引用符-終,*,*,’,’,*,*,*,SS
-의     Ending,助詞,属格,*,*,의10,의,*,*,*,JKG
-‘      Symbol,カッコ,引用符-始,*,*,‘,‘,*,*,*,SS
-이야기       Noun,普通,動作,*,*,이야기,이야기,*,*,A,NNG
-’      Symbol,カッコ,引用符-終,*,*,’,’,*,*,*,SS
-,       Symbol,コンマ,*,*,*,",",",",*,*,*,SP
-‘      Symbol,カッコ,引用符-始,*,*,‘,‘,*,*,*,SS
-책    Noun,普通,*,*,*,책01,책,冊,*,A,NNG
-’      Symbol,カッコ,引用符-終,*,*,’,’,*,*,*,SS
-따위  Noun,依存名詞,*,*,*,따위,따위,*,*,*,NNB
-이     Siteisi,非自立,*,語基1,*,이다,이,*,*,*,VCP
-다     Ending,語尾,終止形,*,1接続,다06,다,*,*,*,EF
-.       Symbol,ピリオド,*,*,*,.,.,*,*,*,SF
-BOS/EOS,*,*,*,*,*,*,*,*,*,*
+**Example output**
+```
+['공기06', '진짜', '좋다01', '다06', '.']
+[('공기06', 'NNG'), ('진짜', 'MAG'), ('좋다01', 'VA'), ('다06', 'EF'), ('.', 'SF')]
+空氣 眞짜 좋다.
 ```
 
-### Tokenize
+---
+
+## High-level API (Python convenience layer)
+
+### `tokenize_hangul(text)`
+
+Return a list of tokens in Hangul base form(Unified Hangul Code).
+
+- Internally uses HanDic via MeCab
+- Automatically restores Hangul syllables from Jamo
+- Robust against unknown words
+
+If you want to obtain tokens in surface form instead of base form, specify “surface” for the `mode` option.
 
 example:
 
-```Python
-mecaboption = f'-r /dev/null -d {handic.DICDIR} -Otokenize'
-tokenizer = MeCab.Tagger(mecaboption)
+```python
+text = "얼굴이 좋아 보여요."
 
-print(tokenizer.parse(jamo))
+handic.tokenize_hangul(text, mode="surface")
+# ['얼굴', '이', '좋아', '보여', '요', '.']
+
+handic.tokenize_hangul(text)
+# ['얼굴01', '이25', '좋다01', '보이다02', '요81', '.']
 ```
 
-result:
+---
 
-```Shell
-뜻 을 가지 ㄴ 가장 작으 ㄴ 말 의 단위 . ‘ 이야기책 ’ 의 ‘ 이야기 ’ , ‘ 책 ’ 따위 이 다 .
+### `tokenize(text)`
+
+Return tokens in **Jamo surface form**.
+
+- Low-level wrapper around MeCab
+
+```python
+text = "집에나 갈까?"
+
+handic.tokenize(text)
+# ['집', '에', '나', '가', 'ᆯ까', '?']
 ```
 
-### Extracting specific POS
+---
 
-example:
+### `pos(text)` — lightweight POS
 
-```Python
-mecaboption = f'-r /dev/null -d {handic.DICDIR}'
+Return `(surface, coarse_pos)` pairs.
 
-tokenizer = MeCab.Tagger(mecaboption)
-tokenizer.parse('')
+- Surface is returned in **Jamo surface form**
+- POS corresponds to the first feature field
 
-node = tokenizer.parseToNode(jamo)
-while node:
-    # 일반명사(pos-tag: NNG)만 추출
-    if node.feature.split(',')[10] in ['NNG']:
-        print(node.feature.split(',')[5])
-    node = node.next
+---
+
+### `pos_tag(text)`
+Return a list of `(token, POS)` tuples.
+
+- Uses HanDic base forms(Unified Hangul Code) when available
+- Falls back to surface forms for unknown words
+- POS tags are based on the Sejong tag set(see https://docs.komoran.kr/firststep/postypes.html)
+
+The following is an example for comparing `pos()` and `pos_tag()`.
+
+```python
+text = "집에서 놀았습니다."
+
+handic.pos(text)
+# [('집', 'Noun'), ('에서', 'Ending'), ('놀아', 'Verb'), ('ᆻ', 'Prefinal'), ('습니다', 'Ending'), ('.', 'Symbol')]
+
+handic.pos_tag(text)
+# [('집01', 'NNG'), ('에서02', 'JKB'), ('놀다01', 'VV'), ('ㅆ', 'EP'), ('습니다', 'EF'), ('.', 'SF')]
 ```
 
-result:
+---
 
-```Shell
-뜻
-말01
-단위02
-이야기책
-이야기
-책01
+### `parse(text)`
+
+Return raw MeCab output string.
+
+- Includes all feature fields
+- Intended for advanced use
+
+```python
+print(handic.parse("어디서 노나요?"))
 ```
+
+output:
+
+```
+어디   Noun,代名詞,*,*,*,어디01,어디,*,*,A,NP
+서    Ending,助詞,処格,*,*,서15,서,*,"에서02의 준말",*,JKB
+노    Verb,自立,ㄹ語幹-脱落形,語基1,*,놀다01,노,*,*,A,VV
+나요   Ending,語尾,終止形,*,1接続,나요,나요,*,"-나11",*,EF
+?     Symbol,疑問符,*,*,*,?,?,*,*,*,SF
+EOS
+```
+
+---
+
+### `convert_text_to_hanja_hangul(text)`
+Convert text into **mixed Hanja + Hangul** representation.
+
+- Uses HanDic feature field (index 7)
+- Preserves whitespace and punctuation
+- Converts remaining Jamo into complete Hangul syllables
+
+> ⚠️ **Caution**  
+> 
+> It may be possible to misidentifying homonyms. e.g. 자신: 自信/自身
+
+---
+
+## Low-level access (for compatibility)
+
+```python
+import handic
+
+print(handic.DICDIR)   # path to bundled HanDic snapshot
+print(handic.VERSION)  # HanDic dictionary version
+```
+
+These are provided mainly for **backward compatibility** and inspection.
+
+---
+
+## Typical use cases
+
+- Using HanDic conveniently from Python
+- Korean corpus analysis and language education research
+- Preprocessing Korean text for NLP pipelines
+- Exploring Hangul / Hanja correspondences in contemporary Korean
+
+---
 
 ## Features
 
@@ -138,9 +221,26 @@ Here is the list of features included in HanDic. For more information, see the [
   - 학습 수준: learning level(index: 9)
   - 세종계획 품사 태그: pos-tag(index: 10)
 
+---
+
+## Citation
+
+When citing **dictionary content**, please cite the HanDic project:
+
+```
+HanDic: morphological analysis dictionary for contemporary Korean
+https://github.com/okikirmui/handic
+```
+
+When citing **this Python package**, please cite both the package and HanDic.
+
+---
+
 ## License
 
 This code is licensed under the MIT license. HanDic is copyright Yoshinori Sugai and distributed under the [BSD license](./LICENSE.handic). 
+
+---
 
 ## Acknowledgment
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "handic"
-version = "26.01.02"
+version = "26.01.03beta10"
 requires-python = ">= 3.8"
 authors = [
     {name="Yoshinori Sugai"},
@@ -26,3 +26,9 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/okikirmui/handic-py"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+handic = ["dicdir/**"]
