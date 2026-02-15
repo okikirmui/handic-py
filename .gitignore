@@ -1,6 +1,6 @@
-handic/dicdir/*.dic
-handic/dicdir/*.bin
-handic/dicdir/dicrc
+# handic/dicdir/*.dic
+# handic/dicdir/*.bin
+# handic/dicdir/dicrc
 
 # for MacOS
 .DS_Store
