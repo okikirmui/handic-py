@@ -15,18 +15,19 @@
 
 ---
 
-## What this package does (and does not)
+# Overview
 
-### ✔ What `handic` provides
-- Automatic access to the **HanDic MeCab dictionary**
-- A **high-level Python API** for Korean morphological analysis
-- Transparent handling of **Jamo-based input/output**
-- Safe fallback behavior for **unknown words**
-- Optional **Hanja (漢字) representation** using HanDic features
+`handic` provides a convenient Python interface for the **HanDic Korean morphological analysis dictionary**.
 
-### ✘ What `handic` is *not*
-- It is **not** the primary distribution point of HanDic itself
-- It does **not** define the linguistic content of the dictionary
+It allows researchers and developers to perform **Korean morphological analysis from Python** without manually configuring dictionary paths or MeCab options.
+
+The package:
+
+- Bundles a snapshot of the HanDic dictionary
+- Provides **high-level Python APIs**
+- Handles **Jamo-based input/output**
+- Supports **Hanja-aware representations**
+- Works across **Linux, macOS, and Windows environments**
 
 ---
 
@@ -182,6 +183,39 @@ Convert text into **mixed Hanja + Hangul** representation.
 > ⚠️ **Caution**  
 > 
 > It may be possible to misidentifying homonyms. e.g. 자신: 自信/自身
+
+---
+
+## Platform compatibility (important update)
+
+Recent versions of `handic` include a **more robust MeCab initialization layer** to improve cross‑platform compatibility.
+
+Earlier versions could fail on **Windows or Conda environments** due to platform-specific path handling issues.
+
+Typical errors included:
+
+```
+[ifs] no such file or directory: /dev/null
+```
+
+or failures caused by Windows path escaping when dictionary paths contained spaces.
+
+### Improvements
+
+The initialization logic now:
+
+- Uses **`os.devnull` instead of `/dev/null`**
+- Automatically **quotes dictionary paths**
+- Normalizes Windows paths to **forward-slash format**
+- Improves MeCab argument handling
+
+These changes make the package more reliable on:
+
+- Windows 10 / 11
+- Miniconda / Anaconda environments
+- Python installations where the dictionary path contains spaces
+
+Most users **do not need to change their code**.
 
 ---
 
