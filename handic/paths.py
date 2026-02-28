@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
+import os
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,6 @@ class HandicPaths:
         except TypeError:
             # In rare cases (e.g., zipped), we would need as_file().
             # For MeCab, we need a real directory path, so extract to a temp dir.
-            # This is unusual for wheels; kept for completeness.
             with resources.as_file(d) as extracted:
                 path = Path(extracted)
 
@@ -36,7 +36,19 @@ class HandicPaths:
                 f"Please ensure the package includes '{self.dicdir_name}' directory."
             )
         return path
-    
+
+    def dicdir_for_mecab(self) -> str:
+        """
+        Return dicdir path as a string that is robust when used in MeCab arguments.
+
+        - On Windows, convert backslashes to forward slashes (reduces escaping issues)
+        - On other OSes, return the normal string path
+        """
+        p = self.dicdir()
+        if os.name == "nt":
+            return p.as_posix()
+        return str(p)
+
     def version_file(self) -> Path:
         """
         Return path to HanDic version file: dicdir/version

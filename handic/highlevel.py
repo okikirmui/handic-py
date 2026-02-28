@@ -3,6 +3,8 @@ from __future__ import annotations
 import csv
 from functools import lru_cache
 from typing import List, Tuple, Optional
+import os
+import sys
 # from io import StringIO
 
 from .paths import PATHS
@@ -23,35 +25,71 @@ def to_jamo(text: str) -> str:
     return jamotools.split_syllables(text, jamo_type="JAMO")
 
 
-def mecab_args(dicdir: Optional[str] = None, extra_args: str = "") -> str:
+def _quote_arg(p: str) -> str:
     """
-    Build MeCab option string for HanDic.
+    Quote/normalize an argument value for MeCab option string.
+
+    - Always wrap with double quotes (handles spaces safely)
+    - On Windows, convert backslashes to forward slashes to avoid escape issues
     """
-    args = "-r /dev/null "  # Disable default rc file
+    s = str(p)
+    if os.name == "nt":
+        s = s.replace("\\", "/")
+    if not (s.startswith('"') and s.endswith('"')):
+        s = f'"{s}"'
+    return s
+
+
+def mecab_args(dicdir: Optional[str] = None, extra_args: str = "", disable_rc: bool = True) -> str:
+    """
+    Build MeCab option string for HanDic (cross-platform stable).
+
+    - disable_rc=True: disable default rc file by pointing -r to OS null device
+      (Windows: nul, Linux/macOS: /dev/null)
+    - dicdir is quoted and normalized to be robust on Windows + conda environments
+    """
+    parts: List[str] = []
+
+    if disable_rc:
+        parts += ["-r", _quote_arg(os.devnull)]
+
     if dicdir is None:
         dicdir = str(PATHS.dicdir())
-    args += f'-d "{dicdir}"'
+    parts += ["-d", _quote_arg(dicdir)]
+
     if extra_args:
-        args += f" {extra_args}"
-    return args
+        parts.append(extra_args.strip())
 
-
+    return " ".join(parts)
 # A stable, user-friendly constant (many people will copy-paste this)
-MECAB_ARGS = mecab_args()
-
-
-@lru_cache(maxsize=8)
-def get_tagger(extra_args: str = ""):
+MECAB_ARGS = mecab_args()  # cross-platf@lru_cache(maxsize=8)
+def get_tagger(extra_args: str = "", disable_rc: bool = True):
     """
-    Cached MeCab.Tagger.
-    Note: MeCab.Tagger may not be thread-safe depending on environment.
-    In web servers, prefer process-based workers or create per-thread taggers.
-    """
-    args = mecab_args(extra_args=extra_args)
-    tagger = MeCab.Tagger(args)
+    Cached MeCab.Tagger (cross-platform stable).
 
-    # Prevent GC-related issues in some bindings (common MeCab Python workaround)
-    tagger.parse("")
+    - On Windows, /dev/null does not exist; we use os.devnull ("nul").
+    - Quote/normalize dictionary path to avoid backslash/space issues in conda.
+    - Call tagger.parse("") to prevent GC-related issues in some bindings.
+    """
+    args = mecab_args(extra_args=extra_args, disable_rc=disable_rc)
+
+    try:
+        tagger = MeCab.Tagger(args)
+        # Prevent GC-related issues in some bindings (common MeCab Python workaround)
+        tagger.parse("")
+        return tagger
+    except Exception as e:
+        # Provide helpful diagnostics without leaking too much noise
+        msg = (
+            "Failed to create MeCab.Tagger.\n"
+            f"Args: {args}\n"
+            f"os.name={os.name}, platform={sys.platform}\n"
+            "Hints:\n"
+            "- Verify the dictionary directory exists and is a MeCab dictionary (often contains dicrc).\n"
+            "- If using conda on Windows, ensure mecab/dictionary binaries match Python architecture (64-bit vs 32-bit).\n"
+            "- Paths with spaces must be quoted; this module quotes them automatically.\n"
+        )
+        raise RuntimeError(msg) from e
     return tagger
 
 
