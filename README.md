@@ -117,6 +117,28 @@ handic.tokenize(text)
 # ['집', '에', '나', '가', 'ᆯ까', '?']
 ```
 
+#### `tokenize()` vs `tokenize_hangul()`
+
+- `tokenize()` returns **raw surface strings in Jamo form** from MeCab output.
+- `tokenize_hangul(mode="surface")` returns **surface forms in composed Hangul** using the feature fields (7th feature).
+
+In short, `tokenize()` preserves the original Jamo sequence, while `tokenize_hangul()` provides normalized Hangul strings.
+
+##### Example
+
+```python
+# Jamo strings are longer because each Hangul syllable is decomposed
+input = '말씀하시였다.'
+
+print("tokenize()")
+for item in handic.tokenize(input):
+    print(f"{item} : {len(item)}")
+
+print("tokenize_hangul(mode = 'surface')")
+for item in handic.tokenize_hangul(input, mode="surface"):
+    print(f"{item} : {len(item)}")
+```
+
 ---
 
 ### `pos(text)` — lightweight POS
