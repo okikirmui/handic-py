@@ -128,15 +128,15 @@ In short, `tokenize()` preserves the original Jamo sequence, while `tokenize_han
 
 ```python
 # Jamo strings are longer because each Hangul syllable is decomposed
-input = '말씀하시였다.'
+input = '받으셨지요.'
 
-# tokenize()
 for item in handic.tokenize(input):
     print(f"{item} : {len(item)}")
+# -> 받으:5, 셔:2, ᆻ:1, 지요:4, .:1
 
-# tokenize_hangul(mode = 'surface')
 for item in handic.tokenize_hangul(input, mode="surface"):
     print(f"{item} : {len(item)}")
+# -> 받으:2, 셔:1, ㅆ:1, 지요:2, .:1
 ```
 
 ---
