@@ -19,11 +19,12 @@
 
 `handic` provides a convenient Python interface for the **HanDic Korean morphological analysis dictionary**.
 
-It allows researchers and developers to perform **Korean morphological analysis from Python** without manually configuring dictionary paths or MeCab options.
+It allows researchers and developers to perform **Korean morphological analysis from Python** without manually configuring MeCab, while also allowing an external compatible dictionary to be selected when needed.
 
 The package:
 
 - Bundles a snapshot of the HanDic dictionary
+- Supports external compatible MeCab dictionaries such as [NK-HanDic](https://github.com/okikirmui/nkhandic) via the `dicdir` argument
 - Provides **high-level Python APIs**
 - Handles **Jamo-based input/output**
 - Supports **Hanja-aware representations**
@@ -33,19 +34,19 @@ The package:
 
 ## Relationship between HanDic and this package
 
+
 ```
-HanDic (dictionary repository)
-        ↓
-   MeCab dictionary files
-        ↓
-  handic (Python wrapper)
-        ↓
-  Your Python code
+Bundled HanDic ───────┐
+                          ├── handic ── Your Python code
+External dictionary ────┘
+(e.g. NK-HanDic)
 ```
 
 - The **linguistic design and dictionary entries** live in the HanDic repository
 - This package bundles a released snapshot of the dictionary **only to enable Python use**
 - Updates to dictionary content are driven by the HanDic project
+
+`handic` does not download or manage external dictionaries. Users are responsible for installing and managing them.
 
 ---
 
@@ -78,13 +79,130 @@ print(handic.convert_text_to_hanja_hangul(text))
 
 ---
 
+## Using an external dictionary
+
+By default, `handic` uses the HanDic dictionary bundled with the package.
+
+You can use another compatible MeCab dictionary by specifying its
+directory with the `dicdir` argument.
+
+```python
+import handic
+
+text = "총비서동지께서 말씀하시였다." # North Korean sentence
+
+result = handic.pos_tag(
+    text,
+    dicdir="/path/to/NK-HanDic"
+)
+
+print(result)
+```
+
+The `dicdir` argument is available for the following functions:
+
+  - `parse()`
+  - `pos()`
+  - `pos_tag()`
+  - `tokenize()`
+  - `tokenize_hangul()`
+  - `convert_text_to_hanja_hangul()`
+
+If `dicdir` is omitted, the HanDic dictionary bundled with `handic`
+is used.
+
+For example:
+
+```python
+handic.pos_tag(text)
+```
+
+is equivalent to:
+
+```python
+handic.pos_tag(
+    text,
+    dicdir=handic.DICDIR
+)
+```
+
+This makes it possible to use other HanDic-compatible MeCab dictionaries,
+including different HanDic versions or NK-HanDic, while dictionary
+installation and version management remain under the user's control.
+
+### Reusing a MeCab tagger
+
+When processing many texts with the same dictionary, you can create a
+MeCab tagger once with `get_tagger()` and reuse it.
+
+```python
+import handic
+
+tagger = handic.get_tagger(
+    dicdir="/path/to/dictionary"
+)
+
+texts = [
+    "첫 번째 문장입니다.",
+    "두 번째 문장입니다.",
+]
+
+for text in texts:
+    result = handic.pos_tag(
+        text,
+        tagger=tagger
+    )
+    print(result)
+```
+
+If `dicdir` is omitted, `get_tagger()` uses the HanDic dictionary bundled
+with the package:
+
+```python
+tagger = handic.get_tagger()
+```
+
+A tagger passed explicitly with the `tagger` argument takes precedence
+over `dicdir`.
+
+For example:
+
+```python
+tagger = handic.get_tagger(
+    dicdir="/path/to/dictionary"
+)
+
+handic.pos_tag(
+    text,
+    tagger=tagger
+)
+```
+
+This approach is recommended when repeatedly analyzing many texts with
+the same dictionary.
+
+### Compatibility
+
+External dictionaries should use a feature layout compatible with HanDic.
+
+In particular, the high-level APIs expect the HanDic-compatible fields
+used for base forms, surface forms, Hanja information, and Sejong POS tags.
+
+`handic.VERSION` and `handic.DICDIR` always refer to the HanDic dictionary
+bundled with the Python package, not to an external dictionary supplied
+through `dicdir`.
+
+`dicdir` must point to a compiled MeCab dictionary directory containing files such as `sys.dic`, `unk.dic`, `matrix.bin`, `char.bin`, and `dicrc`.
+
+---
+
 ## High-level API (Python convenience layer)
 
 ### `tokenize_hangul(text)`
 
-Return a list of tokens in Hangul base form(Unified Hangul Code).
+Return a list of tokens in Hangul base form (Unified Hangul Code).
 
-- Internally uses HanDic via MeCab
+- Internally uses the selected MeCab dictionary
 - Automatically restores Hangul syllables from Jamo
 - Robust against unknown words
 
@@ -153,7 +271,7 @@ Return `(surface, coarse_pos)` pairs.
 ### `pos_tag(text)`
 Return a list of `(token, POS)` tuples.
 
-- Uses HanDic base forms(Unified Hangul Code) when available
+- Uses dictionary base forms(Unified Hangul Code) when available
 - Falls back to surface forms for unknown words
 - POS tags are based on the Sejong tag set(see https://docs.komoran.kr/firststep/postypes.html)
 
@@ -198,13 +316,20 @@ EOS
 ### `convert_text_to_hanja_hangul(text)`
 Convert text into **mixed Hanja + Hangul** representation.
 
-- Uses HanDic feature field (index 7)
+- Uses the HanDic-compatible feature field (index 7)
 - Preserves whitespace and punctuation
 - Converts remaining Jamo into complete Hangul syllables
 
 > ⚠️ **Caution**  
 > 
-> It may be possible to misidentifying homonyms. e.g. 자신: 自信/自身
+> Homonyms may be misidentified (e.g. 자신: 自信 / 自身).
+
+---
+
+### `get_tagger(dicdir=None, ...)`
+
+Create and return a reusable `MeCab.Tagger`.
+If `dicdir` is omitted, the bundled HanDic dictionary is used.
 
 ---
 
@@ -267,7 +392,7 @@ These are provided mainly for **backward compatibility** and inspection.
 
 Here is the list of features included in HanDic. For more information, see the [HanDic 품사 정보](https://github.com/okikirmui/handic/blob/main/docs/pos_detail.md).
 
-  - 품사1, 품사2, 품사3: part of speech(index: 0-2)
+  - 품사1, 품사2, 품사3: part of speech (index: 0-2)
   - 활용형: conjugation "base"(ex. `語基1`, `語基2`, `語基3`)(index: 3)
   - 접속 정보: which "base" the ending is attached to(ex. `1接続`, `2接続`, etc.)(index: 4)
   - 사전 항목: base forms(index: 5)

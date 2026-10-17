@@ -40,7 +40,11 @@ def _quote_arg(p: str) -> str:
     return s
 
 
-def mecab_args(dicdir: Optional[str] = None, extra_args: str = "", disable_rc: bool = True) -> str:
+def mecab_args(
+        dicdir: Optional[str] = None,
+        extra_args: str = "",
+        disable_rc: bool = True
+) -> str:
     """
     Build MeCab option string for HanDic (cross-platform stable).
 
@@ -55,70 +59,116 @@ def mecab_args(dicdir: Optional[str] = None, extra_args: str = "", disable_rc: b
 
     if dicdir is None:
         dicdir = str(PATHS.dicdir())
+
     parts += ["-d", _quote_arg(dicdir)]
 
     if extra_args:
         parts.append(extra_args.strip())
 
     return " ".join(parts)
-# A stable, user-friendly constant (many people will copy-paste this)
-MECAB_ARGS = mecab_args()  # cross-platf@lru_cache(maxsize=8)
-def get_tagger(extra_args: str = "", disable_rc: bool = True):
-    """
-    Cached MeCab.Tagger (cross-platform stable).
+# A stable, user-friendly constant.
+# This always refers to the bundled HanDic.
+MECAB_ARGS = mecab_args()
 
-    - On Windows, /dev/null does not exist; we use os.devnull ("nul").
-    - Quote/normalize dictionary path to avoid backslash/space issues in conda.
-    - Call tagger.parse("") to prevent GC-related issues in some bindings.
+
+@lru_cache(maxsize=16)
+def get_tagger(
+    dicdir: Optional[str] = None,
+    extra_args: str = "",
+    disable_rc: bool = True,
+):
     """
-    args = mecab_args(extra_args=extra_args, disable_rc=disable_rc)
+    Return a cached MeCab.Tagger.
+
+    Parameters
+    ----------
+    dicdir:
+        Path to a MeCab dictionary directory.
+        If None, the HanDic dictionary bundled with this package is used.
+    extra_args:
+        Additional MeCab arguments.
+    disable_rc:
+        Disable the system MeCab rc file when True.
+    """
+    args = mecab_args(
+        dicdir=dicdir,
+        extra_args=extra_args,
+        disable_rc=disable_rc,
+    )
 
     try:
         tagger = MeCab.Tagger(args)
-        # Prevent GC-related issues in some bindings (common MeCab Python workaround)
         tagger.parse("")
         return tagger
+
     except Exception as e:
-        # Provide helpful diagnostics without leaking too much noise
         msg = (
             "Failed to create MeCab.Tagger.\n"
             f"Args: {args}\n"
             f"os.name={os.name}, platform={sys.platform}\n"
             "Hints:\n"
-            "- Verify the dictionary directory exists and is a MeCab dictionary (often contains dicrc).\n"
-            "- If using conda on Windows, ensure mecab/dictionary binaries match Python architecture (64-bit vs 32-bit).\n"
-            "- Paths with spaces must be quoted; this module quotes them automatically.\n"
+            "- Verify that dicdir points to a valid MeCab dictionary.\n"
+            "- The dictionary directory should normally contain dicrc, "
+            "sys.dic, unk.dic, matrix.bin, and char.bin.\n"
+            "- Paths with spaces are quoted automatically.\n"
         )
         raise RuntimeError(msg) from e
-    return tagger
 
 
-def parse(text: str, *, tagger=None, extra_args: str = "", jamo: bool = True) -> str:
+def parse(
+    text: str,
+    *,
+    tagger=None,
+    dicdir: Optional[str] = None,
+    extra_args: str = "",
+    jamo: bool = True,
+) -> str:
     """
     Return MeCab raw output.
+
+    If tagger is not supplied, a Tagger is created using dicdir.
+    If dicdir is None, the bundled HanDic dictionary is used.
     """
     if tagger is None:
-        tagger = get_tagger(extra_args=extra_args)
+        tagger = get_tagger(
+            dicdir=dicdir,
+            extra_args=extra_args,
+        )
+
     src = to_jamo(text) if jamo else text
     return tagger.parse(src)
 
 
-def pos(text: str, *, tagger=None, extra_args: str = "", jamo: bool = True) -> List[Tuple[str, str]]:
-    """
-    Return list of (surface, pos).
-    Assumes MeCab feature format where the first CSV field is coarse POS.
-    """
-    out = parse(text, tagger=tagger, extra_args=extra_args, jamo=jamo)
+def pos(
+    text: str,
+    *,
+    tagger=None,
+    dicdir: Optional[str] = None,
+    extra_args: str = "",
+    jamo: bool = True,
+) -> List[Tuple[str, str]]:
+
+    out = parse(
+        text,
+        tagger=tagger,
+        dicdir=dicdir,
+        extra_args=extra_args,
+        jamo=jamo,
+    )
+
     res: List[Tuple[str, str]] = []
 
     for line in out.splitlines():
         if not line or line == "EOS":
             continue
+
         if "\t" not in line:
             continue
+
         surface, feat = line.split("\t", 1)
         coarse = feat.split(",", 1)[0]
         res.append((surface, coarse))
+
     return res
 
 
@@ -140,8 +190,13 @@ def _to_hangul_best_effort(surface: str) -> str:
         return surface
 
 def pos_tag(
-    text: str, *, tagger=None, extra_args: str = "", jamo: bool = True,
-    unknown_fallback: str = "hangul_surface",  # "surface" | "hangul_surface" | "keep_base_*"
+    text: str,
+    *,
+    tagger=None,
+    dicdir: Optional[str] = None,
+    extra_args: str = "",
+    jamo: bool = True,
+    unknown_fallback: str = "hangul_surface",
 ) -> List[Tuple[str, str]]:
     """
     Return list of (base_or_surface, pos-tag).
@@ -156,7 +211,13 @@ def pos_tag(
       - "hangul_surface": return surface converted to Hangul when possible
       - "keep_base_*": keep '*' as-is (no fallback)
     """
-    out = parse(text, tagger=tagger, extra_args=extra_args, jamo=jamo)
+    out = parse(
+        text,
+        tagger=tagger,
+        dicdir=dicdir,
+        extra_args=extra_args,
+        jamo=jamo,
+    )
     res: List[Tuple[str, str]] = []
 
     for line in out.splitlines():
@@ -186,24 +247,63 @@ def pos_tag(
     return res
 
 
-def tokenize(text: str, *, tagger=None, extra_args: str = "", jamo: bool = True) -> List[str]:
-    """Return token list (surface only)."""
-    return [w for (w, _) in pos(text, tagger=tagger, extra_args=extra_args, jamo=jamo)]
+def tokenize(
+    text: str,
+    *,
+    tagger=None,
+    dicdir: Optional[str] = None,
+    extra_args: str = "",
+    jamo: bool = True,
+) -> List[str]:
+
+    return [
+        w for (w, _) in pos(
+            text,
+            tagger=tagger,
+            dicdir=dicdir,
+            extra_args=extra_args,
+            jamo=jamo,
+        )
+    ]
 
 
-def tokenize_hangul(text: str, *, tagger=None, extra_args: str = "", mode: str = "base") -> List[str]:
+def tokenize_hangul(
+    text: str,
+    *,
+    tagger=None,
+    dicdir: Optional[str] = None,
+    extra_args: str = "",
+    mode: str = "base",
+) -> List[str]:
+
     if mode == "base":
-        return [tok for (tok, _pos) in pos_tag(
-            text, tagger=tagger, extra_args=extra_args, jamo=True, unknown_fallback="hangul_surface"
-        )]
-    else:
-        toks = tokenize(text, tagger=tagger, extra_args=extra_args, jamo=True)
-        return [_to_hangul_best_effort(t) for t in toks]
+        return [
+            tok for (tok, _pos) in pos_tag(
+                text,
+                tagger=tagger,
+                dicdir=dicdir,
+                extra_args=extra_args,
+                jamo=True,
+                unknown_fallback="hangul_surface",
+            )
+        ]
+
+    toks = tokenize(
+        text,
+        tagger=tagger,
+        dicdir=dicdir,
+        extra_args=extra_args,
+        jamo=True,
+    )
+
+    return [_to_hangul_best_effort(t) for t in toks]
 
 
 def convert_text_to_hanja_hangul(
-    text: str, *,
+    text: str,
+    *,
     tagger=None,
+    dicdir: Optional[str] = None,
     extra_args: str = "",
     jamo_input: bool = True,
 ) -> str:
@@ -217,7 +317,10 @@ def convert_text_to_hanja_hangul(
     - 入力全文を一度に解析するので、空白分割による連接変化を回避
     """
     if tagger is None:
-        tagger = get_tagger(extra_args=extra_args)
+        tagger = get_tagger(
+            dicdir=dicdir,
+            extra_args=extra_args,
+        )
 
     src = to_jamo(text) if jamo_input else text  # ここはあなたの現行設計に合わせる
     node = tagger.parseToNode(src)
