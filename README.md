@@ -36,9 +36,9 @@ The package:
 
 
 ```
-Bundled HanDic ───────┐
+Bundled HanDic ───────────┐
                           ├── handic ── Your Python code
-External dictionary ────┘
+External dictionary ──────┘
 (e.g. NK-HanDic)
 ```
 
