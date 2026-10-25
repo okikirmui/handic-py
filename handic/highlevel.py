@@ -72,7 +72,6 @@ def mecab_args(
 MECAB_ARGS = mecab_args()
 
 
-@lru_cache(maxsize=16)
 def get_tagger(
     extra_args: str = "",
     disable_rc: bool = True,
