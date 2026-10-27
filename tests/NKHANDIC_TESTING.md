@@ -167,3 +167,15 @@ When changing the dictionary release:
 | Windows + Conda | Standard path | PASS |
 | Windows + Conda | Spaces, Japanese and Korean | PASS |
 
+
+## Wheel Verification
+
+| Item | Result |
+|---|---|
+| Environment | WSL Debian, Python 3.13.5 |
+| Tested commit | 1028f6d35d2d8b2933373a79e57318066a2d2ff8 |
+| Wheel filename | handic-26.10.17-py3-none-any.whl |
+| Installed outside the source tree | PASS |
+| Bundled HanDic | PASS |
+| External NK-HanDic 20260903 | PASS |
+| Cache clearing and invalid inputs | PASS |
