@@ -147,3 +147,23 @@ When changing the dictionary release:
 3. Investigate any differences before changing expected values.
 4. Run the integration tests and the complete test suite.
 5. Update this document and the expected values together.
+
+
+## Windows Test Results
+
+### Environments
+
+- Windows + venv
+    - Python: 3.14.7
+- Windows + Conda
+    - Python: 3.14.10
+
+### Results
+
+| Environment | Dictionary path | Result |
+|---|---|---|
+| Windows + venv | Standard path | PASS |
+| Windows + venv | Spaces, Japanese and Korean | PASS |
+| Windows + Conda | Standard path | PASS |
+| Windows + Conda | Spaces, Japanese and Korean | PASS |
+
