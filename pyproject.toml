@@ -1,23 +1,23 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "handic"
 version = "26.10.17"
-requires-python = ">= 3.8"
+requires-python = ">= 3.9"
 authors = [
     {name="Yoshinori Sugai"},
     {email="okikirmui+github@gmail.com"}
 ]
 description = "HanDic package for installing via pip."
 readme = "README.md"
-license = {text = "MIT License"}
+license = "MIT AND BSD-3-Clause"
+license-files = ["LICENSE", "LICENSE.handic"]
 keywords = [
     "handic", "MeCab", "Korean Language", "morphological analysis", "morphological analysis dictionary", "korean text processing"
 ]
 classifiers = [
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
   "Natural Language :: Korean",
   "Operating System :: OS Independent",

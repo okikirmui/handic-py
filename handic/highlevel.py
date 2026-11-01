@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Tuple, Optional
 import os
 import sys
@@ -71,25 +72,51 @@ def mecab_args(
 MECAB_ARGS = mecab_args()
 
 
-@lru_cache(maxsize=16)
 def get_tagger(
-    dicdir: Optional[str] = None,
     extra_args: str = "",
     disable_rc: bool = True,
+    *,
+    dicdir=None,
 ):
     """
     Return a cached MeCab.Tagger.
 
     Parameters
     ----------
-    dicdir:
-        Path to a MeCab dictionary directory.
-        If None, the HanDic dictionary bundled with this package is used.
     extra_args:
         Additional MeCab arguments.
     disable_rc:
         Disable the system MeCab rc file when True.
+    dicdir:
+        Path to a MeCab dictionary directory, as str or pathlib.Path.
+        If None, the bundled HanDic dictionary is used.
+        This parameter must be supplied by keyword.
+
+    Notes
+    -----
+    Dictionary paths are resolved before cache lookup.
+    Relative paths are interpreted against the current working directory.
     """
+    selected = PATHS.dicdir() if dicdir is None else dicdir
+
+    # Normalize before cache lookup so that relative paths are resolved
+    # against the current working directory on every call.
+    normalized_dicdir = str(Path(selected).expanduser().resolve())
+
+    return _get_tagger_cached(
+        normalized_dicdir,
+        extra_args,
+        disable_rc,
+    )
+
+
+@lru_cache(maxsize=16)
+def _get_tagger_cached(
+    dicdir: str,
+    extra_args: str,
+    disable_rc: bool,
+):
+    """Create and cache a Tagger using a normalized dictionary path."""
     args = mecab_args(
         dicdir=dicdir,
         extra_args=extra_args,
@@ -104,6 +131,7 @@ def get_tagger(
     except Exception as e:
         msg = (
             "Failed to create MeCab.Tagger.\n"
+            f"Dictionary directory: {dicdir}\n"
             f"Args: {args}\n"
             f"os.name={os.name}, platform={sys.platform}\n"
             "Hints:\n"
@@ -113,6 +141,16 @@ def get_tagger(
             "- Paths with spaces are quoted automatically.\n"
         )
         raise RuntimeError(msg) from e
+
+
+def clear_tagger_cache() -> None:
+    """
+    Clear cached MeCab.Tagger instances.
+
+    Existing Tagger objects held by callers remain unchanged.
+    Create a new Tagger after clearing the cache to reload a dictionary.
+    """
+    _get_tagger_cached.cache_clear()
 
 
 def parse(
@@ -275,6 +313,11 @@ def tokenize_hangul(
     extra_args: str = "",
     mode: str = "base",
 ) -> List[str]:
+
+    if mode not in ("base", "surface"):
+        raise ValueError(
+            f"mode must be 'base' or 'surface', got {mode!r}"
+        )
 
     if mode == "base":
         return [

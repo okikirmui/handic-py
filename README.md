@@ -54,6 +54,8 @@ External dictionary ──────┘
 
 ### Installation
 
+Requires Python 3.9 or later.
+
 ```bash
 pip install handic mecab-python3 jamotools
 ```
@@ -85,6 +87,20 @@ By default, `handic` uses the HanDic dictionary bundled with the package.
 
 You can use another compatible MeCab dictionary by specifying its
 directory with the `dicdir` argument.
+
+For example, download and extract a compiled dictionary from the [NK-HanDic releases](https://github.com/okikirmui/nkhandic/releases).
+Set `dicdir` to the dictionary that directly contains `sys.dic`.
+Other dictionary files, including `unk.dic`, `matrix.bin`, `char.bin`, and `dicrc`, should also be present.
+
+On Windows, use a raw string or forward slashes:
+
+```python
+# Either form can be used on Windows.
+dicdir = r"C:\Users\Yourname\Dictionaries\NK-HanDic"
+# dicdir = "C:/Users/Yourname/Dictionaries/NK-HanDic"
+```
+
+Do not add quotation marks inside the path string; `handic` handles quoting when constructing MeCab arguments.
 
 ```python
 import handic
@@ -162,37 +178,93 @@ with the package:
 tagger = handic.get_tagger()
 ```
 
-A tagger passed explicitly with the `tagger` argument takes precedence
-over `dicdir`.
+When a `tagger` is supplied, it takes precedence over both `dicdir` and `extra_args`.
+These arguments are ignored because the supplied tagger has already been configured.
 
 For example:
 
 ```python
-tagger = handic.get_tagger(
-    dicdir="/path/to/dictionary"
-)
+nk_tagger = handic.get_tagger(dicdir="/path/to/NK-HanDic")
 
-handic.pos_tag(
+# Uses nk_tagger. The dicdir argument is ignored.
+result = handic.pos_tag(
     text,
-    tagger=tagger
+    tagger=nk_tagger,
+    dicdir="/another/dictionary",
 )
 ```
 
-This approach is recommended when repeatedly analyzing many texts with
-the same dictionary.
+This approach is recommended when repeatedly analyzing many texts with the same dictionary.
 
-### Compatibility
+### Tagger cache
 
-External dictionaries should use a feature layout compatible with HanDic.
+`get_tagger()` caches taggers by dictionary path and MeCab options.
+Dictionary paths are resolved before the cache is checked.
+Relative paths are interpreted using the current working directory.
 
-In particular, the high-level APIs expect the HanDic-compatible fields
-used for base forms, surface forms, Hanja information, and Sejong POS tags.
+If dictionary files are updated at the same path, clear the cache and create a new tagger:
 
-`handic.VERSION` and `handic.DICDIR` always refer to the HanDic dictionary
-bundled with the Python package, not to an external dictionary supplied
-through `dicdir`.
+```python
+handic.clear_tagger_cache()
+tagger = handic.get_tagger(dicdir="/path/to/NK-HanDic")
+```
 
-`dicdir` must point to a compiled MeCab dictionary directory containing files such as `sys.dic`, `unk.dic`, `matrix.bin`, `char.bin`, and `dicrc`.
+Clearing the cache does not change taggers already stored in variables.
+Create new taggers after clearing the cache.
+
+The `dicdir` argument of `get_tagger()` is keyword-only:
+
+```python
+tagger = handic.get_tagger(dicdir="/path/to/NK-HanDic")
+```
+
+### Dictionary compatibility
+
+External dictionaries must be compiled MeCab dictionaries compatible
+with the MeCab installation.
+
+For the high-level APIs, their feature layout must also be compatible
+with HanDic:
+
+| Feature | Zero-based index | Used by |
+|---|---:|---|
+| Base form | 5 | `pos_tag()`, `tokenize_hangul(mode="base")` |
+| Hanja representation | 7 | `convert_text_to_hanja_hangul()` |
+| Sejong POS tag | 10 | `pos_tag()` |
+
+`pos()` uses the first feature field as its coarse POS tag.
+`tokenize()` returns the surface string from MeCab output.
+`tokenize_hangul(mode="surface")` composes that surface string into
+Hangul; it does not read the seventh feature field.
+
+By default, the high-level APIs split Hangul syllables into Jamo before
+analysis. The dictionary must therefore be compatible with Jamo input
+for this default behavior.
+
+A dictionary that MeCab can load is not necessarily compatible with
+all `handic` high-level APIs. Check its feature layout and input
+representation before use.
+
+`handic.VERSION` and `handic.DICDIR` always refer to the bundled HanDic
+dictionary, even when an external dictionary is used.
+
+### Dictionary errors
+
+An invalid or incompatible dictionary may cause `get_tagger()` or a
+high-level API to raise `RuntimeError`. The message includes the
+dictionary path and MeCab arguments. The original exception is
+available as `__cause__`:
+
+```python
+try:
+    tagger = handic.get_tagger(dicdir="/path/to/NK-HanDic")
+except RuntimeError as exc:
+    print(exc)
+    print("Original error:", exc.__cause__)
+```
+
+Check the directory path and the dictionary files. Loading a dictionary
+successfully does not by itself verify the feature layout.
 
 ---
 
@@ -238,9 +310,13 @@ handic.tokenize(text)
 #### `tokenize()` vs `tokenize_hangul()`
 
 - `tokenize()` returns **raw surface strings in Jamo form** from MeCab output.
-- `tokenize_hangul(mode="surface")` returns **surface forms in composed Hangul** using the feature fields (7th feature).
+- `tokenize_hangul(mode="surface")` composes each raw MeCab surface string into Hangul. It does not use the seventh feature field.
 
-In short, `tokenize()` preserves the original Jamo sequence, while `tokenize_hangul()` provides normalized Hangul strings.
+`tokenize()` preserves the raw surface strings, while `tokenize_hangul(mode="surface")` composes each surface token into
+Hangul.
+
+`tokenize_hangul()` accepts `mode="base"` and `mode="surface"`.
+Any other value raises `ValueError`.
 
 ##### Example
 
@@ -326,10 +402,18 @@ Convert text into **mixed Hanja + Hangul** representation.
 
 ---
 
-### `get_tagger(dicdir=None, ...)`
+### `get_tagger(extra_args="", disable_rc=True, *, dicdir=None)`
 
-Create and return a reusable `MeCab.Tagger`.
-If `dicdir` is omitted, the bundled HanDic dictionary is used.
+Create or reuse a cached `MeCab.Tagger`. If `dicdir` is omitted, the bundled HanDic dictionary is used.
+Specify an external dictionary using the keyword argument `dicdir`.
+
+`extra_args` is intended for additional MeCab options.
+Avoid options that conflict with the dictionary or configuration file selected by `handic`, such as additional `-d` or `-r` arguments.
+
+Output-format options can change the format returned by MeCab.
+In particular, options such as `-Owakati` are unsuitable for high-level functions that expect tab-separated surface and feature fields.
+
+Use `clear_tagger_cache()` after updating dictionary files at an existing path, then create a new tagger.
 
 ---
 
@@ -358,11 +442,24 @@ The initialization logic now:
 
 These changes make the package more reliable on:
 
-- Windows 10 / 11
-- Miniconda / Anaconda environments
-- Python installations where the dictionary path contains spaces
+- Windows 11
+- The Conda environment listed in the test record
+- Dictionary paths containing spaces
 
 Most users **do not need to change their code**.
+
+### Tested environments
+
+The external dictionary integration tests have been run on:
+
+- WSL Debian: bundled HanDic and NK-HanDic version 20260903
+- Windows with Python and `venv`: bundled HanDic and NK-HanDic
+- Windows with Conda: bundled HanDic and NK-HanDic
+
+On Windows, external dictionary paths containing spaces, Japanese, and Korean characters were also tested.
+
+See [NK-HanDic integration testing](tests/NKHANDIC_TESTING.md) for the
+dictionary version, test environment, and results.
 
 ---
 

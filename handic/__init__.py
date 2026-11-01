@@ -11,6 +11,7 @@ from .paths import PATHS
 from .highlevel import (
     MECAB_ARGS,
     get_tagger,
+    clear_tagger_cache,
     mecab_args,
     parse,
     pos,
@@ -32,6 +33,7 @@ __all__ = [
     # High-level
     "MECAB_ARGS",
     "get_tagger",
+    "clear_tagger_cache",
     "mecab_args",
     "parse",
     "pos",
